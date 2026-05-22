@@ -1,0 +1,175 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Global Safety Net catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+    
+    // --- Global Type Validation Helpers ---
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+    
+    function incoming() {
+      return request.resource.data;
+    }
+    
+    function existing() {
+      return resource.data;
+    }
+    
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isEmailVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+    
+    // --- Role-Based Access Control Helpers ---
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+    
+    function hasRole(roleName) {
+      return isSignedIn() && isEmailVerified() && (
+        // Bootstrapped administrator by email address
+        (roleName == 'Admin' && request.auth.token.email == 'jsadiq4037@gmail.com') ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserRole() == roleName)
+      );
+    }
+    
+    function isAdmin() {
+      return hasRole('Admin');
+    }
+    
+    function isBaker() {
+      return hasRole('Baker') || isAdmin();
+    }
+    
+    // For cashiers or register operators
+    function isCashier() {
+      return hasRole('Cashier') || isAdmin();
+    }
+    
+    // --- Collection Rule Blocks ---
+    
+    // Users profile collection rules
+    match /users/{userId} {
+      function isValidUser(data) {
+        return data.keys().hasAll(['email', 'role', 'updatedAt']) &&
+               data.keys().size() <= 5 && 
+               data.email is string && data.email.size() <= 128 &&
+               data.role in ['Admin', 'Baker', 'Cashier'] &&
+               data.updatedAt is string;
+      }
+
+      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      
+      allow create: if isSignedIn() && isEmailVerified() && isValidId(userId) && userId == request.auth.uid && isValidUser(incoming()) && (
+        // First-time signup role constraint
+        request.auth.token.email == 'jsadiq4037@gmail.com' || incoming().role != 'Admin'
+      );
+      
+      allow update: if isSignedIn() && isEmailVerified() && isValidId(userId) && userId == request.auth.uid && isValidUser(incoming()) && (
+        // Restrict role modification to Admin privilege only
+        isAdmin() || !incoming().diff(existing()).affectedKeys().hasAny(['role'])
+      );
+      
+      allow delete: if isAdmin();
+    }
+    
+    // Breads Master Catalog rules
+    match /breads/{breadId} {
+      function isValidBread(data) {
+        return data.keys().hasAll(['id', 'name', 'category', 'price', 'cost', 'currentStock', 'minStock', 'isActive', 'createdAt', 'updatedAt']) &&
+               data.keys().size() <= 11 && 
+               data.id is string && data.id.size() <= 128 &&
+               data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+               data.category is string && data.category.size() > 0 && data.category.size() <= 50 &&
+               data.price is number && data.price >= 0 &&
+               data.cost is number && data.cost >= 0 &&
+               data.currentStock is number && data.currentStock >= 0 &&
+               data.minStock is number && data.minStock >= 0 &&
+               data.isActive is bool &&
+               data.createdAt is string &&
+               data.updatedAt is string;
+      }
+
+      allow read: if isSignedIn() && isEmailVerified();
+      allow create: if isAdmin() && isValidId(breadId) && breadId == incoming().id && isValidBread(incoming());
+      allow update: if isAdmin() && isValidId(breadId) && breadId == incoming().id && isValidBread(incoming()) && (
+        incoming().createdAt == existing().createdAt
+      );
+      allow delete: if isAdmin() && isValidId(breadId);
+    }
+    
+    // Daily Production Batch rules
+    match /production/{productionId} {
+      function isValidProduction(data) {
+        return data.keys().hasAll(['id', 'breadId', 'breadName', 'quantityPlanned', 'quantityProduced', 'quantityScrapped', 'status', 'date', 'bakerId', 'createdAt', 'updatedAt']) &&
+               data.keys().size() <= 14 && 
+               data.id is string && data.id.size() <= 128 &&
+               data.breadId is string && data.breadId.size() <= 128 &&
+               data.breadName is string && data.breadName.size() <= 100 &&
+               data.quantityPlanned is number && data.quantityPlanned >= 0 &&
+               data.quantityProduced is number && data.quantityProduced >= 0 &&
+               data.quantityScrapped is number && data.quantityScrapped >= 0 &&
+               data.status in ['Planned', 'In Progress', 'Completed', 'Cancelled'] &&
+               data.date is string &&
+               data.bakerId is string &&
+               data.createdAt is string &&
+               data.updatedAt is string;
+      }
+
+      allow read: if isSignedIn() && isEmailVerified();
+      
+      allow create: if isBaker() && isValidId(productionId) && productionId == incoming().id && isValidProduction(incoming()) && (
+        exists(/databases/$(database)/documents/breads/$(incoming().breadId))
+      );
+      
+      allow update: if isBaker() && isValidId(productionId) && productionId == incoming().id && isValidProduction(incoming()) && (
+        isAdmin() || (
+          // Status locking checks
+          existing().status != 'Completed' && existing().status != 'Cancelled' &&
+          incoming().breadId == existing().breadId &&
+          incoming().createdAt == existing().createdAt
+        )
+      );
+      
+      allow delete: if isAdmin() && isValidId(productionId);
+    }
+    
+    // Sales checkout register ledger rules
+    match /sales/{saleId} {
+      function isValidSale(data) {
+        return data.keys().hasAll(['id', 'breadId', 'breadName', 'quantitySold', 'pricePerUnit', 'totalAmount', 'paymentMethod', 'date', 'soldById', 'createdAt', 'updatedAt']) &&
+               data.keys().size() <= 12 && 
+               data.id is string && data.id.size() <= 128 &&
+               data.breadId is string && data.breadId.size() <= 128 &&
+               data.breadName is string && data.breadName.size() <= 100 &&
+               data.quantitySold is number && data.quantitySold > 0 &&
+               data.pricePerUnit is number && data.pricePerUnit >= 0 &&
+               data.totalAmount is number && data.totalAmount == data.quantitySold * data.pricePerUnit &&
+               data.paymentMethod in ['Cash', 'Card', 'Mobile'] &&
+               data.date is string &&
+               data.soldById is string && data.soldById == request.auth.uid &&
+               data.createdAt is string &&
+               data.updatedAt is string;
+      }
+
+      allow read: if isSignedIn() && isEmailVerified();
+      
+      allow create: if isCashier() && isValidId(saleId) && saleId == incoming().id && isValidSale(incoming()) && (
+        exists(/databases/$(database)/documents/breads/$(incoming().breadId))
+      );
+      
+      // Transactions are locked and immutable once submitted
+      allow update: if false;
+      
+      allow delete: if isCashier() && isValidId(saleId);
+    }
+  }
+}

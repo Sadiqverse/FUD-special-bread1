@@ -1,0 +1,6 @@
+{
+  "name": "Bakery Production & Sales Manager",
+  "description": "A comprehensive dashboard designed for bakeries to manage bread catalogs, daily production runs, sales transactions, low-stock alerts, and financial reports.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

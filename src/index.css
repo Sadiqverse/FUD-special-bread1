@@ -1,0 +1,52 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Lora:ital,wght@0,400..700;1,400..700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-serif: "Lora", "Playfair Display", Georgia, serif;
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+
+  /* Editorial Palette overrides */
+  --color-editorial-cream: #FDFCF8;
+  --color-editorial-charcoal: #1A1A1A;
+  --color-editorial-gold: #C68E5A;
+  --color-editorial-green: #5A5A40;
+}
+
+/* Base style resets and beautiful layout defaults */
+html {
+  background-color: #FDFCF8;
+  color: #1A1A1A;
+  font-family: var(--font-sans);
+}
+
+html.dark {
+  background-color: #121212;
+  color: #FDFCF8;
+}
+
+/* Base custom classes to achieve the Editorial typography hierarchy */
+h1 {
+  font-family: var(--font-serif);
+}
+
+h2 {
+  font-family: var(--font-serif);
+}
+
+h3 {
+  font-family: var(--font-serif);
+}
+
+h4 {
+  font-family: var(--font-serif);
+}
+
+/* Custom fine-line editorial tables */
+.editorial-table th {
+  font-family: var(--font-serif);
+  font-style: italic;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  font-size: 10px;
+}

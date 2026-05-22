@@ -1,0 +1,96 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile containing identity role permissions for the bakery",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "description": "Email address of the user" },
+        "displayName": { "type": "string", "description": "Display name of the user" },
+        "role": { "type": "string", "enum": ["Admin", "Baker", "Cashier"], "description": "Assigned authorization role in the system" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Timestamp of last update" }
+      },
+      "required": ["email", "role", "updatedAt"]
+    },
+    "Bread": {
+      "title": "Bread",
+      "description": "Information about a specific bread product in the bakery catalog",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique ID of the bread product" },
+        "name": { "type": "string", "description": "Name of the bread (e.g. Sourdough)" },
+        "category": { "type": "string", "description": "Category of bread product" },
+        "sku": { "type": "string", "description": "Stock Keeping Unit identifier" },
+        "price": { "type": "number", "description": "Standard selling price per unit" },
+        "cost": { "type": "number", "description": "Standard raw material production cost per unit" },
+        "currentStock": { "type": "number", "description": "Current item count in inventory" },
+        "minStock": { "type": "number", "description": "Low-stock alert threshold" },
+        "isActive": { "type": "boolean", "description": "Whether this bread is active in production or sales" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of creation" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Timestamp of last update" }
+      },
+      "required": ["id", "name", "category", "price", "cost", "currentStock", "minStock", "isActive", "createdAt", "updatedAt"]
+    },
+    "Production": {
+      "title": "Production",
+      "description": "A daily production log recording bread baking runs",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique daily production entry ID" },
+        "breadId": { "type": "string", "description": "Reference ID of the bread product" },
+        "breadName": { "type": "string", "description": "Cached bread product name" },
+        "batchNumber": { "type": "string", "description": "Identifier for the baking batch" },
+        "quantityPlanned": { "type": "number", "description": "Quantity targeted for production" },
+        "quantityProduced": { "type": "number", "description": "Quantity successfully baked and added to stock" },
+        "quantityScrapped": { "type": "number", "description": "Quantity damaged/wasted during baking" },
+        "status": { "type": "string", "enum": ["Planned", "In Progress", "Completed", "Cancelled"], "description": "Current status of the production run" },
+        "date": { "type": "string", "format": "date", "description": "Log date (YYYY-MM-DD)" },
+        "bakerId": { "type": "string", "description": "User ID of the baker" },
+        "bakerEmail": { "type": "string", "description": "User email who performed the production" },
+        "notes": { "type": "string", "description": "Baker notes and observations" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Last update timestamp" }
+      },
+      "required": ["id", "breadId", "breadName", "quantityPlanned", "quantityProduced", "quantityScrapped", "status", "date", "bakerId", "createdAt", "updatedAt"]
+    },
+    "Sale": {
+      "title": "Sale",
+      "description": "A record of a retail bread sales transaction",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique checkout transaction ID" },
+        "breadId": { "type": "string", "description": "Reference ID of the bread product" },
+        "breadName": { "type": "string", "description": "Cached bread product name" },
+        "quantitySold": { "type": "number", "description": "Total units purchased" },
+        "pricePerUnit": { "type": "number", "description": "The selling price of the item at checkout" },
+        "totalAmount": { "type": "number", "description": "Calculated transaction value (quantity * price)" },
+        "paymentMethod": { "type": "string", "enum": ["Cash", "Card", "Mobile"], "description": "The payment method used" },
+        "date": { "type": "string", "format": "date", "description": "Log date (YYYY-MM-DD)" },
+        "soldById": { "type": "string", "description": "User ID of the cashier" },
+        "soldByEmail": { "type": "string", "description": "User email of the seller" },
+        "notes": { "type": "string", "description": "Sale transaction notes" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Last update timestamp" }
+      },
+      "required": ["id", "breadId", "breadName", "quantitySold", "pricePerUnit", "totalAmount", "paymentMethod", "date", "soldById", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles and permissions log"
+    },
+    "/breads/{breadId}": {
+      "schema": "Bread",
+      "description": "Bread products master catalog"
+    },
+    "/production/{productionId}": {
+      "schema": "Production",
+      "description": "Daily production batches log"
+    },
+    "/sales/{saleId}": {
+      "schema": "Sale",
+      "description": "Bakery transaction ledger"
+    }
+  }
+}
